@@ -86,3 +86,6 @@ build/
 
 # Input files
 input.txt
+
+# Test files
+test.txt
