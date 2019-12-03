@@ -83,3 +83,6 @@ _deps
 
 # CMake build dir
 build/
+
+# Input files
+input.txt
