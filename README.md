@@ -1,3 +1,3 @@
-# cmake-cpp-template
+# advent-of-code-2019
 
-Template repository for creating a C++ Visual Studio Code project built with CMake
+Advent of Code 2019
