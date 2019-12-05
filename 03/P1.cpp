@@ -3,13 +3,19 @@
 #include <fstream>
 #include <sstream>
 #include <limits>
+#include <algorithm>
+#include <set>
 
 using namespace std;
 
 struct Point {
-    uint16_t x;
-    uint16_t y;
+    int32_t x;
+    int32_t y;
 };
+
+inline bool operator<(const Point& lhs, const Point& rhs) {
+  return lhs.x < rhs.x || (lhs.x == rhs.x && lhs.y < rhs.y);
+}
 
 enum Direction {
     Left,
@@ -19,7 +25,7 @@ enum Direction {
 };
 
 struct Wire {
-    vector<vector<bool>> path;
+    set<Point> points;
     Point position;
 };
 
@@ -38,93 +44,73 @@ Direction directionWithChar(char dir) {
     }
 }
 
-void moveWire(Wire &wire, Direction direction, uint16_t places, Wire *firstWire, vector<Point> &crossings) {
+void inserPointInWire(Wire &wire, Point point) {
+    wire.points.insert(point);
+}
+
+void moveWire(Wire &wire, Direction direction, int32_t places) {
     Point origin = wire.position;
     Point destination = wire.position;
     if (direction == Left || direction == Right) {
         if (direction == Right) {
             destination.x = origin.x + places;
-            for (uint16_t i = origin.x; i <= destination.x; i++) {
-                wire.path[i][destination.y] = true;
-                if (firstWire != nullptr) {
-                    if (firstWire->path[i][destination.y]) {
-                        crossings.push_back({i, destination.y});
-                    }
-                }
+            for (int32_t i = origin.x; i <= destination.x; i++) {
+                inserPointInWire(wire, {i, destination.y});
             }
         } else {
             destination.x = origin.x - places;
-            for (uint16_t i = destination.x; i <= origin.x; i++) {
-                wire.path[i][destination.y] = true;
-                if (firstWire != nullptr) {
-                    if (firstWire->path[i][destination.y]) {
-                        crossings.push_back({i, destination.y});
-                    }
-                }
+            for (int32_t i = destination.x; i <= origin.x; i++) {
+                inserPointInWire(wire, {i, destination.y});
             }
         }
     } else {
         if (direction == Up) {
             destination.y = origin.y + places;
-            for (uint16_t i = origin.y; i <= destination.y; i++) {
-                wire.path[destination.x][i] = true;
-                if (firstWire != nullptr) {
-                    if (firstWire->path[destination.x][i]) {
-                        crossings.push_back({destination.x, i});
-                    }
-                }
+            for (int32_t i = origin.y; i <= destination.y; i++) {
+                inserPointInWire(wire, {destination.x, i});
             }
         } else {
             destination.y = origin.y - places;
-            for (uint16_t i = destination.y; i <= origin.y; i++) {
-                wire.path[destination.x][i] = true;
-                if (firstWire != nullptr) {
-                    if (firstWire->path[destination.x][i]) {
-                        crossings.push_back({destination.x, i});
-                    }
-                }
+            for (int32_t i = destination.y; i <= origin.y; i++) {
+                inserPointInWire(wire, {destination.x, i});
             }
         }
     }
     wire.position = destination;
 }
 
-uint16_t distance(Point a, Point b) {
+uint32_t distance(Point a, Point b) {
     return abs(b.x - a.x) + abs(b.y - a.y); 
 }
 
 int main(int argc, char *argv[]) {
-    uint16_t size = numeric_limits<uint16_t>::max();
-    uint16_t middle = numeric_limits<uint16_t>::max() / 2;
-    Point origin = { middle, middle };
-    ifstream input = ifstream("input.txt");
+    Point origin = { 1, 1 };
+    ifstream input = ifstream("test.txt");
     
     vector<Wire> wires = vector<Wire>();
-    vector<Point> crossings = vector<Point>();
 
     for (string line; getline(input, line);) {
-        Wire wire = { vector<vector<bool>>(size, vector<bool>(size)), origin };
+        Wire wire = { set<Point>(), origin };
         stringstream lineStream = stringstream(line);
         string move;
         while(getline(lineStream, move, ',')) {
             Direction direction = directionWithChar(move[0]);
             string pos = move.substr(1, move.length());
-            uint16_t position = stoi(pos);
-            Wire *firstWire = nullptr;
-            if (wires.size() > 0) {
-                firstWire = &wires[0];
-            }
-            moveWire(wire, direction, position, firstWire, crossings);
+            int32_t position = stoi(pos);
+            moveWire(wire, direction, position);
         }
         wires.push_back(wire);      
     }
 
-    uint16_t minimumDistance = size;
+    set<Point> crossings = set<Point>();
+    set_intersection(wires[0].points.begin(), wires[0].points.end(), wires[1].points.begin(), wires[1].points.end(), std::inserter(crossings, crossings.begin()));
+
+    uint32_t minimumDistance = numeric_limits<uint32_t>::max();
     for (const auto& crossing : crossings) {
         if (crossing.x == origin.x && crossing.y == origin.y) {
             continue;
         }
-        uint16_t dist = distance(origin, crossing);
+        uint32_t dist = distance(origin, crossing);
         if (minimumDistance > dist) {
             minimumDistance = dist;
         }
